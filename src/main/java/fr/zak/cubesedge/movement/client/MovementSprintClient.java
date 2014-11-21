@@ -14,19 +14,24 @@ import fr.zak.cubesedge.entity.EntityPlayerCustom;
 
 public class MovementSprintClient extends IMovementClient {
 
+	private static long lastTime = -1;
+	public static double speed = 0; //actuellement en 2d, enleverles commentaires pour la vitesse en 3d
+	private static double prevPosX;
+	//private static double prevPosY;
+	private static double prevPosZ;
+	private Minecraft mc;
+
 	@SubscribeEvent
 	public void onRenderInGame(RenderGameOverlayEvent.Post event) {
+		if (mc == null)
+			mc = Minecraft.getMinecraft();
+		calculateSpeed();
 		if (event.type == RenderGameOverlayEvent.ElementType.ALL) {
 			this.drawString(
-					Minecraft.getMinecraft().fontRenderer,
-					"Speed : "
-							+ round((MathHelper.abs((float) Minecraft
-									.getMinecraft().thePlayer.motionX) + MathHelper
-									.abs((float) Minecraft.getMinecraft().thePlayer.motionZ)) * 20,
-									1) + " blocks/s", event.resolution
-									.getScaledWidth() - 115, event.resolution
-									.getScaledHeight() - 15, new Color(255, 255, 255)
-					.getRGB());
+						c.fontRenderer,
+						"Speed : " + speedToStr() " blocks/s",
+						event.resolution.getScaledWidth() - 115, event.resolution.getScaledHeight() - 15, new Color(255, 255, 255).getRGB()
+					);
 		}
 	}
 
@@ -34,11 +39,45 @@ public class MovementSprintClient extends IMovementClient {
 			int par3, int par4, int par5) {
 		par1FontRenderer.drawStringWithShadow(par2Str, par3, par4, par5);
 	}
+	
+	public static String speedToStr()
+	{
+		if (speed == 0)
+			return "0";
+		return round(speed, 2)
+	}
+	
+	private void calculateSpeed()
+	{
+		long now = System.currentTimeMillis();
+		long time = lastTime < 0 ? 0 : now - lastTime;
+		
+		speed = 0;
+		if (prevPosX != mc.thePlayer.posX || prevPosZ != mc.thePlayer.posZ /*|| prevPosY != mc.thePlayer.posY*/ )
+		{
+			double vx, vz /*, vy*/;
+			double dist/*, dist2*/;
+			vx = Math.max(prevPosX, mc.thePlayer.posX) - Math.min(prevPosX, mc.thePlayer.posX));
+			vz = Math.max(prevPosZ, mc.thePlayer.posZ) - Math.min(prevPosZ, mc.thePlayer.posZ));
+			//vy = Math.max(prevPosY, mc.thePlayer.posY) - Math.min(prevPosY, mc.thePlayer.posY));
+			dist = Math.sqrt(vx * vx + vz * vz);
+			//dist2 = Math.sqrt(vy * vy + vz * vz);
+			//dist = Math.sqrt(dist * dist + dist2 * dist2);
+			speed = dist / time / 1000;
+		}
+		lastTime = now;
+		prevPosX = mc.thePlayer.posX;
+		//prevPosY = mc.thePlayer.posY;
+		prevPosZ = mc.thePlayer.posZ;
+	}
 
-	public static float round(float d, int decimalPlace) {
-		BigDecimal bd = new BigDecimal(Float.toString(d));
-		bd = bd.setScale(decimalPlace, BigDecimal.ROUND_HALF_UP);
-		return bd.floatValue();
+	public static double round(double d, int decimalPlace) {
+		if (places < 0)
+			throw new IllegalArgumentException();
+
+    		BigDecimal bd = new BigDecimal(value);
+    		bd = bd.setScale(places, RoundingMode.HALF_UP);
+    		return bd.doubleValue();
 	}
 
 	@Override
